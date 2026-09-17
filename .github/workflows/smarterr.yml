@@ -50,8 +50,15 @@ jobs:
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-pkg-mod-${{ hashFiles('go.sum') }}
+      - name: Install smarterr
+        run: go install github.com/YakDriver/smarterr/cmd/smarterr@$(go list -m -f '{{.Version}}' github.com/YakDriver/smarterr)
+
       # long-running test
-      - uses: YakDriver/check-smarterr-config@afed5350c8ce432ad869983086dc4a582520c22e # v0.4.0
-        name: Check smarterr config
-        with:
-          base-dir: './internal'
+      - name: Check smarterr config
+        run: |
+          failed=0
+          while IFS= read -r config_file; do
+            echo "Checking smarterr config: ${config_file}"
+            smarterr check --start-dir="$(dirname "${config_file}")" --base-dir=./internal || failed=1
+          done < <(find . -name 'smarterr.hcl' -type f)
+          exit "${failed}"
